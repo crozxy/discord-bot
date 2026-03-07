@@ -10,15 +10,18 @@ import os
 # Daftar role yang bisa dipilih
 # Format: {"label": "Nama Role", "role_id": ID_ROLE, "emoji": "emoji", "description": "keterangan"}
 ROLES = [
-    {"label": "Pokemon Center", "role_id": 123456789, "emoji": "🎮", "description": "Pokemon fans"},
-    {"label": "Genshin & Starrail", "role_id": 123456790, "emoji": "⚙️", "description": "Hoyoverse games"},
-    {"label": "Kuroverse", "role_id": 123456791, "emoji": "🕊️", "description": "Wuthering Waves, Punishing Gray Raven"},
-    {"label": "RPG", "role_id": 123456792, "emoji": "🎃", "description": "RPG games"},
-    {"label": "Tri Holy Trinity", "role_id": 123456793, "emoji": "✨", "description": "FGO, Arknights, Blue Archive"},
-    {"label": "Minecraft", "role_id": 123456794, "emoji": "⛏️", "description": "Minecraft players"},
-    {"label": "Roblox", "role_id": 123456795, "emoji": "🍄", "description": "Roblox players"},
-    {"label": "Football", "role_id": 123456796, "emoji": "⚽", "description": "EAFC, EFootball"},
-    {"label": "Basketball", "role_id": 123456797, "emoji": "🏀", "description": "Basketball fans"},
+    {"label": "Pokemon Center", "role_id": 1479574417616011298, "emoji": "🎮", "description": "GTA Roleplay"},
+    {"label": "Genshin & Starrail", "role_id": 1479574421680427200, "emoji": "⚙️", "description": "Mobile Legends"},
+    {"label": "Kuroverse", "role_id": 1479574425102975200, "emoji": "🕊️", "description": "PUBG Mobile"},
+    {"label": "RPG", "role_id": 1479574431293636752, "emoji": "🎃", "description": "Free Fire"},
+    {"label": "Tri Holy Trinity", "role_id": 1479574873297780936, "emoji": "✨", "description": "Valorant"},
+    {"label": "Minecraft", "role_id": 1479574876795965470, "emoji": "⛏️", "description": "Delta Force"},
+    {"label": "Roblox", "role_id": 1479574879937232999, "emoji": "🍄", "description": "Fortnite"},
+    {"label": "Football", "role_id": 1479574884152512626, "emoji": "⚽", "description": "Point Blank"},
+    {"label": "Basketball", "role_id": 1479574887675727915, "emoji": "🏀", "description": "Ayodance"},
+    {"label": "Basketball", "role_id": 1479575183093403802, "emoji": "🏀", "description": "Cs Online"},
+    {"label": "Basketball", "role_id": 1479807001088491721, "emoji": "🏀", "description": "Roblox"},
+    
 ]
 
 # Channel ID tempat bot akan kirim pesan dropdown
