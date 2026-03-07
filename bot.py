@@ -7,8 +7,6 @@ import os
 # KONFIGURASI - Edit bagian ini!
 # ================================
 
-# Daftar role yang bisa dipilih
-# Format: {"label": "Nama Role", "role_id": ID_ROLE, "emoji": "emoji", "description": "keterangan"}
 ROLES = [
     {"label": "Pokemon Center", "role_id": 1479574417616011298, "emoji": "🎮", "description": "GTA Roleplay"},
     {"label": "Genshin & Starrail", "role_id": 1479574421680427200, "emoji": "⚙️", "description": "Mobile Legends"},
@@ -21,16 +19,14 @@ ROLES = [
     {"label": "Basketball", "role_id": 1479574887675727915, "emoji": "🏀", "description": "Ayodance"},
     {"label": "Basketball", "role_id": 1479575183093403802, "emoji": "🏀", "description": "Cs Online"},
     {"label": "Basketball", "role_id": 1479807001088491721, "emoji": "🏀", "description": "Roblox"},
-    
 ]
 
-# Channel ID tempat bot akan kirim pesan dropdown
-CHANNEL_ID = 1479580316002943006  # Ganti dengan channel ID kamu
+# Ganti dengan Channel ID kamu
+CHANNEL_ID = 1479580316002943006
 
-# Judul dan deskripsi embed
 EMBED_TITLE = "🎮 Games Catalog"
 EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia di bawah sini!"
-EMBED_COLOR = 0x5865F2  # Warna biru Discord
+EMBED_COLOR = 0x5865F2
 
 # ================================
 # BOT SETUP
@@ -58,48 +54,41 @@ class RoleSelect(discord.ui.Select):
                     description=role_data.get("description", "")
                 )
             )
-        
+
         super().__init__(
+            custom_id="role_select_menu",  # WAJIB untuk persistent view
             placeholder="🎮 Click menu ini untuk memilih roles!",
             min_values=1,
-            max_values=len(options),  # Bisa pilih lebih dari 1
+            max_values=len(options),
             options=options
         )
-    
+
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        
+
         guild = interaction.guild
         member = interaction.user
-        
-        # Ambil semua role ID yang ada di ROLES config
-        all_managed_role_ids = {str(r["role_id"]) for r in ROLES}
-        
-        # Role yang dipilih user
         selected_role_ids = set(self.values)
-        
+
         added_roles = []
         removed_roles = []
-        
+
         for role_data in ROLES:
             role_id = str(role_data["role_id"])
             role = guild.get_role(role_data["role_id"])
-            
+
             if not role:
                 continue
-            
+
             if role_id in selected_role_ids:
-                # Tambah role jika belum punya
                 if role not in member.roles:
                     await member.add_roles(role)
                     added_roles.append(role_data["label"])
             else:
-                # Hapus role jika sudah punya tapi tidak dipilih lagi
                 if role in member.roles:
                     await member.remove_roles(role)
                     removed_roles.append(role_data["label"])
-        
-        # Buat response message
+
         msg = ""
         if added_roles:
             msg += f"✅ **Role ditambahkan:** {', '.join(added_roles)}\n"
@@ -107,13 +96,13 @@ class RoleSelect(discord.ui.Select):
             msg += f"❌ **Role dihapus:** {', '.join(removed_roles)}\n"
         if not added_roles and not removed_roles:
             msg = "ℹ️ Tidak ada perubahan role."
-        
+
         await interaction.followup.send(msg, ephemeral=True)
 
 
 class RoleView(discord.ui.View):
     def __init__(self):
-        super().__init__(timeout=None)  # Tidak timeout (persistent)
+        super().__init__(timeout=None)
         self.add_item(RoleSelect())
 
 
@@ -124,11 +113,7 @@ class RoleView(discord.ui.View):
 @bot.event
 async def on_ready():
     print(f"✅ Bot {bot.user} sudah online!")
-    
-    # Register persistent view
     bot.add_view(RoleView())
-    
-    # Sync slash commands
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash command(s)")
@@ -139,26 +124,16 @@ async def on_ready():
 @bot.tree.command(name="setup_roles", description="Kirim pesan dropdown role ke channel")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_roles(interaction: discord.Interaction):
-    """Command untuk admin kirim pesan dropdown"""
-    
     channel = bot.get_channel(CHANNEL_ID)
     if not channel:
         await interaction.response.send_message("❌ Channel tidak ditemukan! Cek CHANNEL_ID di config.", ephemeral=True)
         return
-    
-    # Buat embed
-    embed = discord.Embed(
-        title=EMBED_TITLE,
-        description=EMBED_DESCRIPTION,
-        color=EMBED_COLOR
-    )
-    
-    # Tambah list games ke embed
+
+    embed = discord.Embed(title=EMBED_TITLE, description=EMBED_DESCRIPTION, color=EMBED_COLOR)
     games_list = "\n".join([f"{r['emoji']} | **{r['label']}**" for r in ROLES])
     embed.add_field(name="📋 Available Roles", value=games_list, inline=False)
     embed.set_footer(text="Kamu bisa pilih lebih dari 1 role!")
-    
-    # Kirim ke channel
+
     await channel.send(embed=embed, view=RoleView())
     await interaction.response.send_message(f"✅ Berhasil kirim dropdown ke {channel.mention}!", ephemeral=True)
 
@@ -167,9 +142,8 @@ async def setup_roles(interaction: discord.Interaction):
 async def my_roles(interaction: discord.Interaction):
     member = interaction.user
     managed_role_ids = {r["role_id"] for r in ROLES}
-    
     user_game_roles = [r for r in member.roles if r.id in managed_role_ids]
-    
+
     if user_game_roles:
         role_names = ", ".join([r.name for r in user_game_roles])
         await interaction.response.send_message(f"🎮 Role kamu: **{role_names}**", ephemeral=True)
@@ -181,10 +155,9 @@ async def my_roles(interaction: discord.Interaction):
 # RUN BOT
 # ================================
 
-TOKEN = os.getenv("DISCORD_TOKEN")  # Ambil token dari environment variable
+TOKEN = os.getenv("DISCORD_TOKEN")
 
 if not TOKEN:
     print("❌ ERROR: DISCORD_TOKEN tidak ditemukan!")
-    print("Set environment variable DISCORD_TOKEN dengan token bot kamu.")
 else:
     bot.run(TOKEN)
