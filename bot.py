@@ -115,7 +115,9 @@ async def on_ready():
     print(f"✅ Bot {bot.user} sudah online!")
     bot.add_view(RoleView())
     try:
-        synced = await bot.tree.sync()
+        guild = discord.Object(id=1479550234450198563)  # ganti dengan server ID
+        bot.tree.copy_global_to(guild=guild)
+        synced = await bot.tree.sync(guild=guild)
         print(f"✅ Synced {len(synced)} slash command(s)")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
@@ -161,3 +163,4 @@ if not TOKEN:
     print("❌ ERROR: DISCORD_TOKEN tidak ditemukan!")
 else:
     bot.run(TOKEN)
+
