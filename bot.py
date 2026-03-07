@@ -8,17 +8,19 @@ import os
 # ================================
 
 ROLES = [
-    {"label": "Pokemon Center", "role_id": 1479574417616011298, "emoji": "🎮", "description": "GTA Roleplay"},
-    {"label": "Genshin & Starrail", "role_id": 1479574421680427200, "emoji": "⚙️", "description": "Mobile Legends"},
-    {"label": "Kuroverse", "role_id": 1479574425102975200, "emoji": "🕊️", "description": "PUBG Mobile"},
-    {"label": "RPG", "role_id": 1479574431293636752, "emoji": "🎃", "description": "Free Fire"},
-    {"label": "Tri Holy Trinity", "role_id": 1479574873297780936, "emoji": "✨", "description": "Valorant"},
-    {"label": "Minecraft", "role_id": 1479574876795965470, "emoji": "⛏️", "description": "Delta Force"},
-    {"label": "Roblox", "role_id": 1479574879937232999, "emoji": "🍄", "description": "Fortnite"},
-    {"label": "Football", "role_id": 1479574884152512626, "emoji": "⚽", "description": "Point Blank"},
-    {"label": "Basketball", "role_id": 1479574887675727915, "emoji": "🏀", "description": "Ayodance"},
-    {"label": "Basketball", "role_id": 1479575183093403802, "emoji": "🏀", "description": "Cs Online"},
-    {"label": "Basketball", "role_id": 1479807001088491721, "emoji": "🏀", "description": "Roblox"},
+    {"label": "Roblox", "role_id": 1479807001088491721, "emoji": "🎮"},
+    {"label": "GTA Roleplay", "role_id": 1479574417616011298, "emoji": "🎮"},
+    {"label": "Mobile Legends", "role_id": 1479574421680427200, "emoji": "🎮"},
+    {"label": "PUBG Mobile", "role_id": 1479574425102975200, "emoji": "🎮"},
+    {"label": "PUBG PC", "role_id": 1479574428403896442, "emoji": "🎮"},
+    {"label": "Free Fire", "role_id": 1479574431293636752, "emoji": "🎮"},
+    {"label": "Valorant", "role_id": 1479574873297780936, "emoji": "🎮"},
+    {"label": "Delta Force", "role_id": 1479574876795965470, "emoji": "🎮"},
+    {"label": "Fortnite", "role_id": 1479574879937232999, "emoji": "🎮"},
+    {"label": "Point Blank", "role_id": 1479574884152512626, "emoji": "🎮"},
+    {"label": "Ayodance", "role_id": 1479574887675727915, "emoji": "🎮"},
+    {"label": "CS Online", "role_id": 1479575183093403802, "emoji": "🎮"},
+    {"label": "Game Lain", "role_id": 1479575186939576422, "emoji": "🎮"},
 ]
 
 # Ganti dengan Channel ID kamu
@@ -163,4 +165,5 @@ if not TOKEN:
     print("❌ ERROR: DISCORD_TOKEN tidak ditemukan!")
 else:
     bot.run(TOKEN)
+
 
