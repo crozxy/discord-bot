@@ -6,7 +6,7 @@ from discord.ext import commands
 from discord import app_commands
 
 # ================================
-# SETUP FLASK UNTUK KEEP-ALIVE (RENDER)
+# SETUP FLASK UNTUK KEEP-ALIVE
 # ================================
 
 app = Flask('')
@@ -16,7 +16,6 @@ def home():
     return "Bot Discord Online!"
 
 def run():
-    # Render otomatis memberikan Port via Environment Variable
     port = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=port)
 
@@ -24,35 +23,7 @@ def keep_alive():
     t = Thread(target=run)
     t.start()
 
-# Jalankan server Flask di thread terpisah
 keep_alive()
-
-# ================================
-# KONFIGURASI - Edit bagian ini!
-# ================================
-
-ROLES = [
-    {"label": "Roblox", "role_id": 1479807001088491721, "emoji": "🎮"},
-    {"label": "GTA Roleplay", "role_id": 1479574417616011298, "emoji": "🎮"},
-    {"label": "Mobile Legends", "role_id": 1479574421680427200, "emoji": "🎮"},
-    {"label": "PUBG Mobile", "role_id": 1479574425102975200, "emoji": "🎮"},
-    {"label": "PUBG PC", "role_id": 1479574428403896442, "emoji": "🎮"},
-    {"label": "Free Fire", "role_id": 1479574431293636752, "emoji": "🎮"},
-    {"label": "Valorant", "role_id": 1479574873297780936, "emoji": "🎮"},
-    {"label": "Delta Force", "role_id": 1479574876795965470, "emoji": "🎮"},
-    {"label": "Fortnite", "role_id": 1479574879937232999, "emoji": "🎮"},
-    {"label": "Point Blank", "role_id": 1479574884152512626, "emoji": "🎮"},
-    {"label": "Ayodance", "role_id": 1479574887675727915, "emoji": "🎮"},
-    {"label": "CS Online", "role_id": 1479575183093403802, "emoji": "🎮"},
-    {"label": "Game Lain", "role_id": 1479575186939576422, "emoji": "🎮"},
-]
-
-# Ganti dengan Channel ID kamu
-CHANNEL_ID = 1479580316002943006
-
-EMBED_TITLE = "🎮 Games Catalog"
-EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia di bawah sini!"
-EMBED_COLOR = 0x5865F2
 
 # ================================
 # BOT SETUP
@@ -65,26 +36,25 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ================================
-# DROPDOWN VIEW
+# DROPDOWN VIEW (DINAMIS & PERSISTENT)
 # ================================
 
 class RoleSelect(discord.ui.Select):
-    def __init__(self):
+    def __init__(self, roles_data):
         options = []
-        for role_data in ROLES:
+        for role_data in roles_data:
             options.append(
                 discord.SelectOption(
                     label=role_data["label"],
                     value=str(role_data["role_id"]),
-                    emoji=role_data["emoji"],
-                    description=role_data.get("description", "")
+                    emoji=role_data.get("emoji", "🎮")
                 )
             )
 
         super().__init__(
-            custom_id="role_select_menu",  # WAJIB untuk persistent view
+            custom_id="role_select_menu",  # Wajib untuk Persistent View
             placeholder="🎮 Click menu ini untuk memilih roles!",
-            min_values=1,
+            min_values=0,
             max_values=len(options),
             options=options
         )
@@ -99,21 +69,22 @@ class RoleSelect(discord.ui.Select):
         added_roles = []
         removed_roles = []
 
-        for role_data in ROLES:
-            role_id = str(role_data["role_id"])
-            role = guild.get_role(role_data["role_id"])
+        # Ambil semua role ID yang ada di dalam menu dropdown ini
+        all_option_role_ids = {int(opt.value) for opt in self.options}
 
+        for role_id in all_option_role_ids:
+            role = guild.get_role(role_id)
             if not role:
                 continue
 
-            if role_id in selected_role_ids:
+            if str(role_id) in selected_role_ids:
                 if role not in member.roles:
                     await member.add_roles(role)
-                    added_roles.append(role_data["label"])
+                    added_roles.append(role.name)
             else:
                 if role in member.roles:
                     await member.remove_roles(role)
-                    removed_roles.append(role_data["label"])
+                    removed_roles.append(role.name)
 
         msg = ""
         if added_roles:
@@ -127,9 +98,10 @@ class RoleSelect(discord.ui.Select):
 
 
 class RoleView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, roles_data=None):
         super().__init__(timeout=None)
-        self.add_item(RoleSelect())
+        if roles_data:
+            self.add_item(RoleSelect(roles_data))
 
 
 # ================================
@@ -139,41 +111,59 @@ class RoleView(discord.ui.View):
 @bot.event
 async def on_ready():
     print(f"✅ Bot {bot.user} sudah online!")
-    bot.add_view(RoleView())
+    
+    # Sync Slash Commands secara Global ke semua server
     try:
-        guild = discord.Object(id=1479550234450198563)  # ganti dengan server ID
-        bot.tree.copy_global_to(guild=guild)
-        synced = await bot.tree.sync(guild=guild)
-        print(f"✅ Synced {len(synced)} slash command(s)")
+        synced = await bot.tree.sync()
+        print(f"✅ Synced {len(synced)} slash command(s) secara global!")
     except Exception as e:
         print(f"❌ Error syncing commands: {e}")
 
 
-@bot.tree.command(name="setup_roles", description="Kirim pesan dropdown role ke channel")
+@bot.tree.command(name="setup_roles", description="Kirim pesan dropdown role di channel saat ini")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_roles(interaction: discord.Interaction):
-    channel = bot.get_channel(CHANNEL_ID)
-    if not channel:
-        await interaction.response.send_message("❌ Channel tidak ditemukan! Cek CHANNEL_ID di config.", ephemeral=True)
+    """
+    Perintah ini akan mengambil SEMUA role yang ada di server tempat kamu mengetikkan command,
+    lalu membuatnya menjadi menu dropdown secara otomatis!
+    """
+    guild = interaction.guild
+    
+    # Ambil role server (mengabaikan role @everyone dan role bot)
+    roles = [r for r in guild.roles if not r.is_default() and not r.is_integration() and not r.managed]
+    
+    if not roles:
+        await interaction.response.send_message("❌ Tidak ada role yang bisa ditampilkan di server ini!", ephemeral=True)
         return
 
-    embed = discord.Embed(title=EMBED_TITLE, description=EMBED_DESCRIPTION, color=EMBED_COLOR)
-    games_list = "\n".join([f"{r['emoji']} | **{r['label']}**" for r in ROLES])
+    # Batasi maksimal 25 role per dropdown (limit bawaan Discord UI)
+    roles = roles[:25]
+    roles_data = [{"label": r.name, "role_id": r.id, "emoji": "🎮"} for r in roles]
+
+    embed = discord.Embed(
+        title="🎮 Games Catalog / Select Roles",
+        description="Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia!",
+        color=0x5865F2
+    )
+    
+    games_list = "\n".join([f"🎮 | **{r.name}**" for r in roles])
     embed.add_field(name="📋 Available Roles", value=games_list, inline=False)
     embed.set_footer(text="Kamu bisa pilih lebih dari 1 role!")
 
-    await channel.send(embed=embed, view=RoleView())
-    await interaction.response.send_message(f"✅ Berhasil kirim dropdown ke {channel.mention}!", ephemeral=True)
+    view = RoleView(roles_data)
+    
+    # Kirim langsung ke channel tempat command dipanggil
+    await interaction.channel.send(embed=embed, view=view)
+    await interaction.response.send_message(f"✅ Berhasil mengirim dropdown role ke channel {interaction.channel.mention}!", ephemeral=True)
 
 
 @bot.tree.command(name="my_roles", description="Lihat role yang kamu punya")
 async def my_roles(interaction: discord.Interaction):
     member = interaction.user
-    managed_role_ids = {r["role_id"] for r in ROLES}
-    user_game_roles = [r for r in member.roles if r.id in managed_role_ids]
+    roles = [r.name for r in member.roles if not r.is_default()]
 
-    if user_game_roles:
-        role_names = ", ".join([r.name for r in user_game_roles])
+    if roles:
+        role_names = ", ".join(roles)
         await interaction.response.send_message(f"🎮 Role kamu: **{role_names}**", ephemeral=True)
     else:
         await interaction.response.send_message("ℹ️ Kamu belum memilih role apapun.", ephemeral=True)
@@ -183,7 +173,6 @@ async def my_roles(interaction: discord.Interaction):
 # RUN BOT
 # ================================
 
-# Ambil token dari Environment Variable Render
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 if not TOKEN:
