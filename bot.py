@@ -1,7 +1,31 @@
+from flask import Flask
+from threading import Thread
+import os
 import discord
 from discord.ext import commands
 from discord import app_commands
-import os
+
+# ================================
+# SETUP FLASK UNTUK KEEP-ALIVE (RENDER)
+# ================================
+
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Bot Discord Online!"
+
+def run():
+    # Render otomatis memberikan Port via Environment Variable
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+def keep_alive():
+    t = Thread(target=run)
+    t.start()
+
+# Jalankan server Flask di thread terpisah
+keep_alive()
 
 # ================================
 # KONFIGURASI - Edit bagian ini!
@@ -159,11 +183,10 @@ async def my_roles(interaction: discord.Interaction):
 # RUN BOT
 # ================================
 
+# Ambil token dari Environment Variable Render
 TOKEN = os.getenv("DISCORD_TOKEN")
 
 if not TOKEN:
     print("❌ ERROR: DISCORD_TOKEN tidak ditemukan!")
 else:
     bot.run(TOKEN)
-
-
