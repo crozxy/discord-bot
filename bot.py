@@ -26,6 +26,14 @@ def keep_alive():
 keep_alive()
 
 # ================================
+# KONFIGURASI EMBED
+# ================================
+
+EMBED_TITLE = "🎮 Games Catalog"
+EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia di bawah sini!"
+EMBED_COLOR = 0x5865F2
+
+# ================================
 # BOT SETUP
 # ================================
 
@@ -36,7 +44,7 @@ intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 # ================================
-# DROPDOWN VIEW (DINAMIS & PERSISTENT)
+# DROPDOWN VIEW
 # ================================
 
 class RoleSelect(discord.ui.Select):
@@ -47,12 +55,13 @@ class RoleSelect(discord.ui.Select):
                 discord.SelectOption(
                     label=role_data["label"],
                     value=str(role_data["role_id"]),
-                    emoji=role_data.get("emoji", "🎮")
+                    emoji=role_data.get("emoji", "🎮"),
+                    description=role_data.get("description", "")
                 )
             )
 
         super().__init__(
-            custom_id="role_select_menu",  # Wajib untuk Persistent View
+            custom_id="role_select_menu",  # WAJIB untuk persistent view
             placeholder="🎮 Click menu ini untuk memilih roles!",
             min_values=0,
             max_values=len(options),
@@ -69,7 +78,6 @@ class RoleSelect(discord.ui.Select):
         added_roles = []
         removed_roles = []
 
-        # Ambil semua role ID yang ada di dalam menu dropdown ini
         all_option_role_ids = {int(opt.value) for opt in self.options}
 
         for role_id in all_option_role_ids:
@@ -112,7 +120,7 @@ class RoleView(discord.ui.View):
 async def on_ready():
     print(f"✅ Bot {bot.user} sudah online!")
     
-    # Sync Slash Commands secara Global ke semua server
+    # Sync command secara global ke semua server
     try:
         synced = await bot.tree.sync()
         print(f"✅ Synced {len(synced)} slash command(s) secara global!")
@@ -120,41 +128,30 @@ async def on_ready():
         print(f"❌ Error syncing commands: {e}")
 
 
-@bot.tree.command(name="setup_roles", description="Kirim pesan dropdown role di channel saat ini")
+@bot.tree.command(name="setup_roles", description="Kirim pesan dropdown role ke channel saat ini")
 @app_commands.checks.has_permissions(administrator=True)
 async def setup_roles(interaction: discord.Interaction):
-    """
-    Perintah ini akan mengambil SEMUA role yang ada di server tempat kamu mengetikkan command,
-    lalu membuatnya menjadi menu dropdown secara otomatis!
-    """
     guild = interaction.guild
-    
-    # Ambil role server (mengabaikan role @everyone dan role bot)
+    channel = interaction.channel  # Mengambil channel tempat command dipanggil!
+
+    # Membaca daftar role yang ada di server tempat command dipanggil
     roles = [r for r in guild.roles if not r.is_default() and not r.is_integration() and not r.managed]
     
     if not roles:
         await interaction.response.send_message("❌ Tidak ada role yang bisa ditampilkan di server ini!", ephemeral=True)
         return
 
-    # Batasi maksimal 25 role per dropdown (limit bawaan Discord UI)
+    # Maksimal 25 roles untuk limit Discord UI
     roles = roles[:25]
     roles_data = [{"label": r.name, "role_id": r.id, "emoji": "🎮"} for r in roles]
 
-    embed = discord.Embed(
-        title="🎮 Games Catalog / Select Roles",
-        description="Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia!",
-        color=0x5865F2
-    )
-    
+    embed = discord.Embed(title=EMBED_TITLE, description=EMBED_DESCRIPTION, color=EMBED_COLOR)
     games_list = "\n".join([f"🎮 | **{r.name}**" for r in roles])
     embed.add_field(name="📋 Available Roles", value=games_list, inline=False)
     embed.set_footer(text="Kamu bisa pilih lebih dari 1 role!")
 
-    view = RoleView(roles_data)
-    
-    # Kirim langsung ke channel tempat command dipanggil
-    await interaction.channel.send(embed=embed, view=view)
-    await interaction.response.send_message(f"✅ Berhasil mengirim dropdown role ke channel {interaction.channel.mention}!", ephemeral=True)
+    await channel.send(embed=embed, view=RoleView(roles_data))
+    await interaction.response.send_message(f"✅ Berhasil kirim dropdown ke {channel.mention}!", ephemeral=True)
 
 
 @bot.tree.command(name="my_roles", description="Lihat role yang kamu punya")
