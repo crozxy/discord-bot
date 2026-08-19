@@ -26,28 +26,45 @@ def keep_alive():
 keep_alive()
 
 # ================================
-# TEMPLATE DAFTAR GAME PERMANEN
+# MAPPING GAME & CUSTOM EMOJI
 # ================================
 
-GAME_LIST = [
-    "Roblox",
-    "GTA Roleplay",
-    "Mobile Legends",
-    "PUBG Mobile",
-    "PUBG PC",
-    "Free Fire",
-    "Valorant",
-    "Delta Force",
-    "Fortnite",
-    "Point Blank",
-    "Ayodance",
-    "CS Online",
-    "Game Lain"
-]
+GAME_EMOJIS = {
+    "Roblox": {"name": "roblox", "id": 1539595113288831006},
+    "GTA Roleplay": {"name": "gtaroleplay", "id": 1539596445026484244},
+    "Mobile Legends": {"name": "mobilelegends", "id": 1539596724039983205},
+    "PUBG Mobile": {"name": "pubgmobile", "id": 1539596200481661008},
+    "PUBG PC": {"name": "pubgpc", "id": 1539597049866231838},
+    "Free Fire": {"name": "freefire", "id": 1539597493397102694},
+    "Valorant": {"name": "valorant", "id": 1539594228819165244},
+    "Delta Force": {"name": "deltaforce", "id": 1539598339996258436},
+    "Fortnite": {"name": "fortnite", "id": 1539598447869427814},
+    "Point Blank": {"name": "pointblank", "id": 1539598575535788092},
+    "Ayodance": {"name": "ayodance", "id": 1539598709237481553},
+    "CS Online": {"name": "csonline", "id": 1539599086632570950},
+    "Game Lain": {"name": "gamelain", "id": 1539599212273205248}
+}
+
+GAME_LIST = list(GAME_EMOJIS.keys())
 
 EMBED_TITLE = "🎮 Games Catalog"
 EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia di bawah sini!"
 EMBED_COLOR = 0x5865F2
+
+# Helper function untuk format string emoji di Embed
+def get_emoji_str(game_name):
+    data = GAME_EMOJIS.get(game_name)
+    if data:
+        return f"<:{data['name']}:{data['id']}>"
+    return "🎮"
+
+# Helper function untuk objek PartialEmoji di Select Option Dropdown
+def get_partial_emoji(game_name):
+    data = GAME_EMOJIS.get(game_name)
+    if data:
+        return discord.PartialEmoji(name=data["name"], id=data["id"])
+    return discord.PartialEmoji(name="🎮")
+
 
 # ================================
 # DROPDOWN SELECTION (PERSISTENT)
@@ -55,7 +72,6 @@ EMBED_COLOR = 0x5865F2
 
 class DynamicRoleSelect(discord.ui.Select):
     def __init__(self):
-        # Placeholder awal sebelum diisi opsi role aktual
         options = [discord.SelectOption(label="Loading...", value="0")]
         super().__init__(
             custom_id="persistent_game_role_select",
@@ -71,10 +87,7 @@ class DynamicRoleSelect(discord.ui.Select):
         guild = interaction.guild
         member = interaction.user
 
-        # Dapatkan semua role game yang cocok di server saat ini
         game_roles = [r for r in guild.roles if r.name in GAME_LIST]
-        game_role_ids = {r.id for r in game_roles}
-
         selected_role_ids = {int(val) for val in self.values if val.isdigit()}
 
         added_roles = []
@@ -85,14 +98,14 @@ class DynamicRoleSelect(discord.ui.Select):
                 if role not in member.roles:
                     try:
                         await member.add_roles(role)
-                        added_roles.append(role.name)
+                        added_roles.append(f"{get_emoji_str(role.name)} **{role.name}**")
                     except discord.Forbidden:
                         pass
             else:
                 if role in member.roles:
                     try:
                         await member.remove_roles(role)
-                        removed_roles.append(role.name)
+                        removed_roles.append(f"{get_emoji_str(role.name)} **{role.name}**")
                     except discord.Forbidden:
                         pass
 
@@ -112,7 +125,6 @@ class GameRoleView(discord.ui.View):
         super().__init__(timeout=None)
         
         if roles_data:
-            # Mengisi opsi dropdown saat command /setup_roles dijalankan
             self.clear_items()
             select = discord.ui.Select(
                 custom_id="persistent_game_role_select",
@@ -123,14 +135,13 @@ class GameRoleView(discord.ui.View):
                     discord.SelectOption(
                         label=r["name"],
                         value=str(r["id"]),
-                        emoji="🎮"
+                        emoji=get_partial_emoji(r["name"])
                     ) for r in roles_data
                 ]
             )
             select.callback = DynamicRoleSelect().callback
             self.add_item(select)
         else:
-            # Default persistent listener saat bot restart
             self.clear_items()
             self.add_item(DynamicRoleSelect())
 
@@ -147,7 +158,6 @@ class RoleBot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents)
 
     async def setup_hook(self):
-        # Mendaftarkan Persistent View agar interaksi tetap aktif setelah restart
         self.add_view(GameRoleView())
 
 
@@ -195,11 +205,10 @@ async def setup_roles(interaction: discord.Interaction):
         color=EMBED_COLOR
     )
     
-    games_list_str = "\n".join([f"🎮 | **{r['name']}**" for r in found_roles])
+    games_list_str = "\n".join([f"{get_emoji_str(r['name'])} | **{r['name']}**" for r in found_roles])
     embed.add_field(name="📋 Available Roles", value=games_list_str, inline=False)
     embed.set_footer(text="Kamu bisa pilih lebih dari 1 role!")
 
-    # Kirim Embed + View dengan Custom ID Persisten
     await interaction.response.send_message(embed=embed, view=GameRoleView(found_roles))
 
     if missing_roles:
