@@ -47,8 +47,8 @@ GAME_EMOJIS = {
 
 GAME_LIST = list(GAME_EMOJIS.keys())
 
-EMBED_TITLE = "🎮 Games Catalog"
-EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan keinginan kamu untuk mengakses channel yang tersedia di bawah sini!"
+EMBED_TITLE = "__**GAMES CATALOG**__"
+EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan game yang kamu mainkan di bawah sini!"
 EMBED_COLOR = 0x5865F2
 
 # Helper function untuk format string emoji di Embed
@@ -199,14 +199,16 @@ async def setup_roles(interaction: discord.Interaction):
         )
         return
 
+    # Gabungkan deskripsi utama dan daftar role secara langsung tanpa label 'Available Roles'
+    games_list_str = "\n".join([f"{get_emoji_str(r['name'])} | **{r['name']}**" for r in found_roles])
+    full_description = f"{EMBED_DESCRIPTION}\n\n{games_list_str}"
+
     embed = discord.Embed(
         title=EMBED_TITLE,
-        description=EMBED_DESCRIPTION,
+        description=full_description,
         color=EMBED_COLOR
     )
     
-    games_list_str = "\n".join([f"{get_emoji_str(r['name'])} | **{r['name']}**" for r in found_roles])
-    embed.add_field(name="📋 Available Roles", value=games_list_str, inline=False)
     embed.set_footer(text="Kamu bisa pilih lebih dari 1 role!")
 
     await interaction.response.send_message(embed=embed, view=GameRoleView(found_roles))
