@@ -50,37 +50,18 @@ EMBED_DESCRIPTION = "Silakan pilih roles sesuai dengan keinginan kamu untuk meng
 EMBED_COLOR = 0x5865F2
 
 # ================================
-# BOT SETUP
+# DROPDOWN SELECTION (PERSISTENT)
 # ================================
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-
-bot = commands.Bot(command_prefix="!", intents=intents)
-
-# ================================
-# DROPDOWN ROLE SELECTION
-# ================================
-
-class GameRoleSelect(discord.ui.Select):
-    def __init__(self, roles_data):
-        options = []
-        for role_data in roles_data:
-            options.append(
-                discord.SelectOption(
-                    label=role_data["name"],
-                    value=str(role_data["id"]),
-                    emoji="🎮",
-                    description=f"Pilih untuk mengambil role {role_data['name']}"
-                )
-            )
-
+class DynamicRoleSelect(discord.ui.Select):
+    def __init__(self):
+        # Placeholder awal sebelum diisi opsi role aktual
+        options = [discord.SelectOption(label="Loading...", value="0")]
         super().__init__(
-            custom_id="game_role_select_menu",
+            custom_id="persistent_game_role_select",
             placeholder="🎮 Click menu ini untuk memilih roles!",
-            min_values=0,            # Boleh kosongkan semua
-            max_values=len(options),  # Bisa pilih LEBIH DARI 1 role sekaligus
+            min_values=0,
+            max_values=1,
             options=options
         )
 
@@ -89,26 +70,31 @@ class GameRoleSelect(discord.ui.Select):
 
         guild = interaction.guild
         member = interaction.user
-        selected_role_ids = set(self.values)
+
+        # Dapatkan semua role game yang cocok di server saat ini
+        game_roles = [r for r in guild.roles if r.name in GAME_LIST]
+        game_role_ids = {r.id for r in game_roles}
+
+        selected_role_ids = {int(val) for val in self.values if val.isdigit()}
 
         added_roles = []
         removed_roles = []
 
-        all_option_role_ids = {int(opt.value) for opt in self.options}
-
-        for role_id in all_option_role_ids:
-            role = guild.get_role(role_id)
-            if not role:
-                continue
-
-            if str(role_id) in selected_role_ids:
+        for role in game_roles:
+            if role.id in selected_role_ids:
                 if role not in member.roles:
-                    await member.add_roles(role)
-                    added_roles.append(role.name)
+                    try:
+                        await member.add_roles(role)
+                        added_roles.append(role.name)
+                    except discord.Forbidden:
+                        pass
             else:
                 if role in member.roles:
-                    await member.remove_roles(role)
-                    removed_roles.append(role.name)
+                    try:
+                        await member.remove_roles(role)
+                        removed_roles.append(role.name)
+                    except discord.Forbidden:
+                        pass
 
         msg = ""
         if added_roles:
@@ -122,10 +108,50 @@ class GameRoleSelect(discord.ui.Select):
 
 
 class GameRoleView(discord.ui.View):
-    def __init__(self, roles_data):
+    def __init__(self, roles_data=None):
         super().__init__(timeout=None)
-        self.add_item(GameRoleSelect(roles_data))
+        
+        if roles_data:
+            # Mengisi opsi dropdown saat command /setup_roles dijalankan
+            self.clear_items()
+            select = discord.ui.Select(
+                custom_id="persistent_game_role_select",
+                placeholder="🎮 Click menu ini untuk memilih roles!",
+                min_values=0,
+                max_values=len(roles_data),
+                options=[
+                    discord.SelectOption(
+                        label=r["name"],
+                        value=str(r["id"]),
+                        emoji="🎮"
+                    ) for r in roles_data
+                ]
+            )
+            select.callback = DynamicRoleSelect().callback
+            self.add_item(select)
+        else:
+            # Default persistent listener saat bot restart
+            self.clear_items()
+            self.add_item(DynamicRoleSelect())
 
+
+# ================================
+# BOT CLASS WITH SETUP HOOK
+# ================================
+
+class RoleBot(commands.Bot):
+    def __init__(self):
+        intents = discord.Intents.default()
+        intents.message_content = True
+        intents.members = True
+        super().__init__(command_prefix="!", intents=intents)
+
+    async def setup_hook(self):
+        # Mendaftarkan Persistent View agar interaksi tetap aktif setelah restart
+        self.add_view(GameRoleView())
+
+
+bot = RoleBot()
 
 # ================================
 # EVENTS & COMMANDS
@@ -149,7 +175,6 @@ async def setup_roles(interaction: discord.Interaction):
     found_roles = []
     missing_roles = []
 
-    # Mencocokkan daftar GAME_LIST dengan Role yang ada di Server Settings Discord
     for game_name in GAME_LIST:
         role = discord.utils.get(guild.roles, name=game_name)
         if role:
@@ -164,7 +189,6 @@ async def setup_roles(interaction: discord.Interaction):
         )
         return
 
-    # Buat Tampilan Embed Persis Seperti di Gambar
     embed = discord.Embed(
         title=EMBED_TITLE,
         description=EMBED_DESCRIPTION,
@@ -175,13 +199,12 @@ async def setup_roles(interaction: discord.Interaction):
     embed.add_field(name="📋 Available Roles", value=games_list_str, inline=False)
     embed.set_footer(text="Kamu bisa pilih lebih dari 1 role!")
 
-    # Kirim Embed + Dropdown
+    # Kirim Embed + View dengan Custom ID Persisten
     await interaction.response.send_message(embed=embed, view=GameRoleView(found_roles))
 
-    # Peringatan rahasia untuk Admin jika ada role yang belum sempat dibuat
     if missing_roles:
         await interaction.followup.send(
-            f"⚠️ **Info Admin:** Role berikut belum ditemukan di Server Settings: `{', '.join(missing_roles)}`",
+            f"⚠️ **Info Admin:** Role berikut belum dibuat di Server Settings: `{', '.join(missing_roles)}`",
             ephemeral=True
         )
 
